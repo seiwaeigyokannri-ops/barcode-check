@@ -15,7 +15,7 @@
     }
     h2 { margin: 8px 0; font-size: 1.2rem; }
     #reader {
-      max-width: 480px; /* 横幅を広げてカメラ映像をワイドに */
+      max-width: 480px;
       margin: 0 auto;
       background: #000;
       border-radius: 8px;
@@ -72,7 +72,6 @@
           osc.stop(ctx.currentTime + 0.4);
         }
       } catch (e) {
-        // AudioContext非対応時のエラー抑制
       }
     }
 
@@ -97,11 +96,21 @@
       setTimeout(() => { isProcessing = false; }, 1500);
     }
 
-    // 読み取り枠設定：横幅 320px × 高さ 120px（横長バーコード仕様）
+    // 読み取り対象のフォーマットを限定（誤読・部分読み取り防止）
+    const formatsToSupport = [
+      Html5QrcodeSupportedFormats.CODE_128,
+      Html5QrcodeSupportedFormats.QR_CODE,
+      Html5QrcodeSupportedFormats.DATA_MATRIX
+    ];
+
     const scanner = new Html5QrcodeScanner("reader", { 
-      fps: 15,
-      qrbox: { width: 320, height: 120 }, 
+      fps: 20,
+      qrbox: { width: 340, height: 100 }, 
       aspectRatio: 1.333,
+      formatsToSupport: formatsToSupport,
+      experimentalFeatures: {
+        useBarCodeDetectorIfSupported: true // スマホ内蔵の高速検出エンジンを使用
+      },
       rememberLastUsedCamera: true
     });
     scanner.render(onScanSuccess);
