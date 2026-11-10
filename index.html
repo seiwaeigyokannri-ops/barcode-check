@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>24桁バーコードチェッカー</title>
+  <script src="https://unpkg.com/html5-qrcode"></script>
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      margin: 0;
+      padding: 15px;
+      text-align: center;
+      background-color: #f4f5f7;
+    }
+    h2 { margin: 10px 0; font-size: 1.3rem; }
+    #reader {
+      max-width: 360px;
+      margin: 0 auto;
+      background: #fff;
+      border-radius: 8px;
+      overflow: hidden;
+    }
+    #result-box {
+      margin-top: 20px;
+      padding: 20px;
+      border-radius: 12px;
+      font-size: 1.5rem;
+      font-weight: bold;
+      min-height: 80px;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      background-color: #e2e8f0;
+      color: #4a5568;
+      word-break: break-all;
+    }
+    .ok { background-color: #28a745 !important; color: #fff !important; }
+    .ng { background-color: #dc3545 !important; color: #fff !important; }
+    .details { font-size: 0.9rem; font-weight: normal; margin-top: 8px; }
+  </style>
+</head>
+<body>
+
+  <h2>出荷前 バーコード桁数判定</h2>
+  <div id="reader"></div>
+  <div id="result-box">
+    <div>コードをかざしてください</div>
+  </div>
+
+  <script>
+    let isProcessing = false;
+
+    // ビープ音生成（Web Audio API）
+    function playBeep(type) {
+      const ctx = new (window.AudioContext || window.webkitAudioContext)();
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+
+      if (type === 'ok') {
+        osc.frequency.setValueAtTime(880, ctx.currentTime); // 高いピピッ音
+        gain.gain.setValueAtTime(0.2, ctx.currentTime);
+        osc.start();
+        osc.stop(ctx.currentTime + 0.15);
+      } else {
+        osc.frequency.setValueAtTime(220, ctx.currentTime); // 低いブー音
+        gain.gain.setValueAtTime(0.3, ctx.currentTime);
+        osc.start();
+        osc.stop(ctx.currentTime + 0.4);
+      }
+    }
+
+    function onScanSuccess(decodedText) {
+      if (isProcessing) return; // 連続過剰スキャン防止
+      isProcessing = true;
+
+      const len = decodedText.length;
+      const resBox = document.getElementById('result-box');
+
+      if (len === 24) {
+        resBox.className = 'ok';
+        resBox.innerHTML = `<div>【OK】24桁</div><div class="details">${decodedText}</div>`;
+        playBeep('ok');
+      } else {
+        resBox.className = 'ng';
+        resBox.innerHTML = `<div>【NG】桁数異常：${len}桁</div><div class="details">${decodedText}</div>`;
+        playBeep('ng');
+        if (navigator.vibrate) navigator.vibrate([200, 100, 200]);
+      }
+
+      // 1.5秒後に次の読み取りを受け付け
+      setTimeout(() => { isProcessing = false; }, 1500);
+    }
+
+    const scanner = new Html5QrcodeScanner("reader", { 
+      fps: 10, 
+      qrbox: { width: 220, height: 220 },
+      rememberLastUsedCamera: true
+    });
+    scanner.render(onScanSuccess);
+  </script>
+</body>
+</html>
